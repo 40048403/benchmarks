@@ -150,7 +150,7 @@ class EEGNetResidual(torch.nn.Module):
             cnn_spatial_kernels * cnn_septemporal_depth_multiplier
         )
         self.conv_module.add_module(
-            "conv_1.5",
+            "conv_1_5",
             sb.nnet.CNN.Conv2d(
                 in_channels=cnn_spatial_kernels,
                 out_channels=cnn_spatial_kernels,
