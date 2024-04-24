@@ -6,6 +6,7 @@ Authors
  * Davide Borra, 2021
 """
 import torch
+import torch.nn as nn
 import speechbrain as sb
 
 
@@ -90,162 +91,214 @@ class EEGNetResidual(torch.nn.Module):
         C = input_shape[2]
 
         # CONVOLUTIONAL MODULE
-        self.conv_module = torch.nn.Sequential()
-        # Temporal convolution
-        self.conv_module.add_module(
-            "conv_0",
-            sb.nnet.CNN.Conv2d(
-                in_channels=1,
-                out_channels=cnn_temporal_kernels,
-                kernel_size=cnn_temporal_kernelsize,
-                padding="same",
-                padding_mode="constant",
-                bias=False,
-                swap=True,
-            ),
-        )
-        self.conv_module.add_module(
-            "bnorm_0",
-            sb.nnet.normalization.BatchNorm2d(
-                input_size=cnn_temporal_kernels, momentum=0.01, affine=True,
-            ),
-        )
-        # Spatial depthwise convolution
-        cnn_spatial_kernels = (
-            cnn_spatial_depth_multiplier * cnn_temporal_kernels
-        )
-        self.conv_module.add_module(
-            "conv_1",
-            sb.nnet.CNN.Conv2d(
-                in_channels=cnn_temporal_kernels,
-                out_channels=cnn_spatial_kernels,
-                kernel_size=(1, C),
-                groups=cnn_temporal_kernels,
-                padding="valid",
-                bias=False,
-                max_norm=cnn_spatial_max_norm,
-                swap=True,
-            ),
-        )
-        self.conv_module.add_module(
-            "bnorm_1",
-            sb.nnet.normalization.BatchNorm2d(
-                input_size=cnn_spatial_kernels, momentum=0.01, affine=True,
-            ),
-        )
-        self.conv_module.add_module("act_1", activation)
-        self.conv_module.add_module(
-            "pool_1",
-            sb.nnet.pooling.Pooling2d(
-                pool_type=cnn_pool_type,
-                kernel_size=cnn_spatial_pool,
-                stride=cnn_spatial_pool,
-                pool_axis=[1, 2],
-            ),
-        )
-        self.conv_module.add_module("dropout_1", torch.nn.Dropout(p=dropout))
+        # self.conv_module = torch.nn.Sequential()
+        # # Temporal convolution
+        # self.conv_module.add_module(
+        #     "conv_0",
+        #     sb.nnet.CNN.Conv2d(
+        #         in_channels=1,
+        #         out_channels=cnn_temporal_kernels,
+        #         kernel_size=cnn_temporal_kernelsize,
+        #         padding="same",
+        #         padding_mode="constant",
+        #         bias=False,
+        #         swap=True,
+        #     ),
+        # )
+        # self.conv_module.add_module(
+        #     "bnorm_0",
+        #     sb.nnet.normalization.BatchNorm2d(
+        #         input_size=cnn_temporal_kernels, momentum=0.01, affine=True,
+        #     ),
+        # )
+        # # Spatial depthwise convolution
+        # cnn_spatial_kernels = (
+        #     cnn_spatial_depth_multiplier * cnn_temporal_kernels
+        # )
+        # self.conv_module.add_module(
+        #     "conv_1",
+        #     sb.nnet.CNN.Conv2d(
+        #         in_channels=cnn_temporal_kernels,
+        #         out_channels=cnn_spatial_kernels,
+        #         kernel_size=(1, C),
+        #         groups=cnn_temporal_kernels,
+        #         padding="valid",
+        #         bias=False,
+        #         max_norm=cnn_spatial_max_norm,
+        #         swap=True,
+        #     ),
+        # )
+        # self.conv_module.add_module(
+        #     "bnorm_1",
+        #     sb.nnet.normalization.BatchNorm2d(
+        #         input_size=cnn_spatial_kernels, momentum=0.01, affine=True,
+        #     ),
+        # )
+        # self.conv_module.add_module("act_1", activation)
+        # self.conv_module.add_module(
+        #     "pool_1",
+        #     sb.nnet.pooling.Pooling2d(
+        #         pool_type=cnn_pool_type,
+        #         kernel_size=cnn_spatial_pool,
+        #         stride=cnn_spatial_pool,
+        #         pool_axis=[1, 2],
+        #     ),
+        # )
+        # self.conv_module.add_module("dropout_1", torch.nn.Dropout(p=dropout))
+        #
+        # # Temporal separable convolution
+        # cnn_septemporal_kernels = (
+        #     cnn_spatial_kernels * cnn_septemporal_depth_multiplier
+        # )
+        #
+        # self.conv_module.add_module(
+        #     "conv_2",
+        #     sb.nnet.CNN.Conv2d(
+        #         in_channels=cnn_spatial_kernels,
+        #         out_channels=cnn_septemporal_kernels,
+        #         kernel_size=cnn_septemporal_kernelsize,
+        #         groups=cnn_spatial_kernels,
+        #         padding="same",
+        #         padding_mode="constant",
+        #         bias=False,
+        #         swap=True,
+        #     ),
+        # )
+        #
+        # if cnn_septemporal_point_kernels is None:
+        #     cnn_septemporal_point_kernels = cnn_septemporal_kernels
+        #
+        # self.conv_module.add_module(
+        #     "conv_3",
+        #     sb.nnet.CNN.Conv2d(
+        #         in_channels=cnn_septemporal_kernels,
+        #         out_channels=cnn_septemporal_point_kernels,
+        #         kernel_size=(1, 1),
+        #         padding="valid",
+        #         bias=False,
+        #         swap=True,
+        #     ),
+        # )
+        # self.conv_module.add_module(
+        #     "bnorm_3",
+        #     sb.nnet.normalization.BatchNorm2d(
+        #         input_size=cnn_septemporal_point_kernels,
+        #         momentum=0.01,
+        #         affine=True,
+        #     ),
+        # )
+        # self.conv_module.add_module("act_3", activation)
+        # self.conv_module.add_module(
+        #     "pool_3",
+        #     sb.nnet.pooling.Pooling2d(
+        #         pool_type=cnn_pool_type,
+        #         kernel_size=cnn_septemporal_pool,
+        #         stride=cnn_septemporal_pool,
+        #         pool_axis=[1, 2],
+        #     ),
+        # )
+        # self.conv_module.add_module("dropout_3", torch.nn.Dropout(p=dropout))
+        #
+        # # Shape of intermediate feature maps
+        # out = self.conv_module(
+        #     torch.ones((1,) + tuple(input_shape[1:-1]) + (1,))
+        # )
+        # dense_input_size = self._num_flat_features(out)
+        # # DENSE MODULE
+        # self.dense_module = torch.nn.Sequential()
+        # self.dense_module.add_module(
+        #     "flatten", torch.nn.Flatten(),
+        # )
+        # self.dense_module.add_module(
+        #     "fc_out",
+        #     sb.nnet.linear.Linear(
+        #         input_size=dense_input_size,
+        #         n_neurons=dense_n_neurons,
+        #         max_norm=dense_max_norm,
+        #     ),
+        # )
+        # self.dense_module.add_module("act_out", torch.nn.LogSoftmax(dim=1))
 
-        # Temporal separable convolution
-        cnn_septemporal_kernels = (
-            cnn_spatial_kernels * cnn_septemporal_depth_multiplier
-        )
-        self.conv_module.add_module(
-            "conv_1_5",
-            sb.nnet.CNN.Conv2d(
-                in_channels=cnn_spatial_kernels,
-                out_channels=cnn_spatial_kernels,
-                kernel_size=cnn_septemporal_kernelsize,
-                groups=cnn_spatial_kernels,
-                padding="same",
-                padding_mode="constant",
-                bias=False,
-                swap=True,
-            ),
-        )
+    # def _num_flat_features(self, x):
+    #     """Returns the number of flattened features from a tensor.
+    #
+    #     Arguments
+    #     ---------
+    #     x : torch.Tensor
+    #         Input feature map.
+    #     """
+    #
+    #     size = x.size()[1:]  # all dimensions except the batch dimension
+    #     num_features = 1
+    #     for s in size:
+    #         num_features *= s
+    #     return num_features
+        # Convolutional layers defined individually
+        self.conv_0 = sb.nnet.CNN.Conv2d(in_channels=1, out_channels=cnn_temporal_kernels,
+                                         kernel_size=cnn_temporal_kernelsize, padding="same", padding_mode="constant",
+                                         bias=False, swap=True)
+        self.bnorm_0 = sb.nnet.normalization.BatchNorm2d(input_size=cnn_temporal_kernels, momentum=0.01, affine=True)
+        cnn_spatial_kernels = cnn_spatial_depth_multiplier * cnn_temporal_kernels
+        self.conv_1 = sb.nnet.CNN.Conv2d(in_channels=cnn_temporal_kernels, out_channels=cnn_spatial_kernels,
+                                         kernel_size=(1, C), groups=cnn_temporal_kernels, padding="valid", bias=False,
+                                         max_norm=cnn_spatial_max_norm, swap=True)
+        self.bnorm_1 = sb.nnet.normalization.BatchNorm2d(input_size=cnn_spatial_kernels, momentum=0.01, affine=True)
+        self.act_1 = activation
+        self.pool_1 = sb.nnet.pooling.Pooling2d(pool_type=cnn_pool_type, kernel_size=cnn_spatial_pool,
+                                                stride=cnn_spatial_pool, pool_axis=[1, 2])
+        self.dropout_1 = nn.Dropout(p=dropout)
 
-        self.conv_module.add_module(
-            "conv_2",
-            sb.nnet.CNN.Conv2d(
-                in_channels=cnn_spatial_kernels,
-                out_channels=cnn_septemporal_kernels,
-                kernel_size=cnn_septemporal_kernelsize,
-                groups=cnn_spatial_kernels,
-                padding="same",
-                padding_mode="constant",
-                bias=False,
-                swap=True,
-            ),
-        )
+        cnn_septemporal_kernels = cnn_spatial_kernels * cnn_septemporal_depth_multiplier
+        self.conv_2 = sb.nnet.CNN.Conv2d(in_channels=cnn_spatial_kernels, out_channels=cnn_septemporal_kernels,
+                                         kernel_size=cnn_septemporal_kernelsize, groups=cnn_spatial_kernels,
+                                         padding="same", padding_mode="constant", bias=False, swap=True)
+        self.conv_3 = sb.nnet.CNN.Conv2d(in_channels=cnn_septemporal_kernels, out_channels=(
+            cnn_septemporal_point_kernels if cnn_septemporal_point_kernels is not None else cnn_septemporal_kernels),
+                                         kernel_size=(1, 1), padding="valid", bias=False, swap=True)
+        self.bnorm_3 = sb.nnet.normalization.BatchNorm2d(input_size=(
+            cnn_septemporal_point_kernels if cnn_septemporal_point_kernels is not None else cnn_septemporal_kernels),
+            momentum=0.01, affine=True)
+        self.act_3 = activation
+        self.pool_3 = sb.nnet.pooling.Pooling2d(pool_type=cnn_pool_type, kernel_size=cnn_septemporal_pool,
+                                                stride=cnn_septemporal_pool, pool_axis=[1, 2])
+        self.dropout_3 = nn.Dropout(p=dropout)
 
-        if cnn_septemporal_point_kernels is None:
-            cnn_septemporal_point_kernels = cnn_septemporal_kernels
+        # Generate a temporary tensor to determine the input size for dense layers
+        temp_out = self.forward_temp(torch.ones((1,) + tuple(input_shape[1:-1]) + (1,)))
+        dense_input_size = self._num_flat_features(temp_out)
 
-        self.conv_module.add_module(
-            "conv_3",
-            sb.nnet.CNN.Conv2d(
-                in_channels=cnn_septemporal_kernels,
-                out_channels=cnn_septemporal_point_kernels,
-                kernel_size=(1, 1),
-                padding="valid",
-                bias=False,
-                swap=True,
-            ),
-        )
-        self.conv_module.add_module(
-            "bnorm_3",
-            sb.nnet.normalization.BatchNorm2d(
-                input_size=cnn_septemporal_point_kernels,
-                momentum=0.01,
-                affine=True,
-            ),
-        )
-        self.conv_module.add_module("act_3", activation)
-        self.conv_module.add_module(
-            "pool_3",
-            sb.nnet.pooling.Pooling2d(
-                pool_type=cnn_pool_type,
-                kernel_size=cnn_septemporal_pool,
-                stride=cnn_septemporal_pool,
-                pool_axis=[1, 2],
-            ),
-        )
-        self.conv_module.add_module("dropout_3", torch.nn.Dropout(p=dropout))
-
-        # Shape of intermediate feature maps
-        out = self.conv_module(
-            torch.ones((1,) + tuple(input_shape[1:-1]) + (1,))
-        )
-        dense_input_size = self._num_flat_features(out)
-        # DENSE MODULE
-        self.dense_module = torch.nn.Sequential()
-        self.dense_module.add_module(
-            "flatten", torch.nn.Flatten(),
-        )
+        # Dense module using add_module for maintaining structure
+        self.dense_module = nn.Sequential()
+        self.dense_module.add_module("flatten", nn.Flatten())
         self.dense_module.add_module(
             "fc_out",
-            sb.nnet.linear.Linear(
-                input_size=dense_input_size,
-                n_neurons=dense_n_neurons,
-                max_norm=dense_max_norm,
-            ),
+            sb.nnet.linear.Linear(input_size=dense_input_size, n_neurons=dense_n_neurons, max_norm=dense_max_norm)
         )
-        self.dense_module.add_module("act_out", torch.nn.LogSoftmax(dim=1))
+        self.dense_module.add_module("act_out", nn.LogSoftmax(dim=1))
 
     def _num_flat_features(self, x):
-        """Returns the number of flattened features from a tensor.
-
-        Arguments
-        ---------
-        x : torch.Tensor
-            Input feature map.
-        """
-
         size = x.size()[1:]  # all dimensions except the batch dimension
         num_features = 1
         for s in size:
             num_features *= s
         return num_features
 
+    def forward_temp(self, x):
+        # Sequentially apply convolution and activation layers
+        x = self.conv_0(x)
+        x = self.bnorm_0(x)
+        x = self.conv_1(x)
+        x = self.bnorm_1(x)
+        x = self.act_1(x)
+        x = self.pool_1(x)
+        x = self.dropout_1(x)
+        x = self.conv_2(x)
+        x = self.conv_3(x)
+        x = self.bnorm_3(x)
+        x = self.act_3(x)
+        x = self.pool_3(x)
+        x = self.dropout_3(x)
+        return x
     def forward(self, x):
         """Returns the output of the model.
 
@@ -254,6 +307,8 @@ class EEGNetResidual(torch.nn.Module):
         x : torch.Tensor (batch, time, EEG channel, channel)
             Input to convolve. 4d tensors are expected.
         """
-        x = self.conv_module(x)
+        # x = self.conv_module(x)
+        # x = self.dense_module(x)
+        x = self.forward_temp(x)
         x = self.dense_module(x)
         return x
